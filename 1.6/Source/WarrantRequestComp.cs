@@ -97,45 +97,51 @@ namespace SimpleWarrants
 
 		private Thing TryGetWarrantTargetInCaravan(Warrant warrant, Caravan caravan)
 		{
-			var tame = warrant as Warrant_TameAnimal;
-
-			foreach (var thing in GetPotentialTargetsInCaravan(warrant, caravan))
+			try
 			{
-				// Tame warrant requires any pawn of the required type.
-				if (tame != null && thing is Pawn p && p.RaceProps.Animal && p.kindDef == tame.AnimalRace)
+				var tame = warrant as Warrant_TameAnimal;
+
+				foreach (var thing in GetPotentialTargetsInCaravan(warrant, caravan))
 				{
-					// Check tameness.
-					bool isTame = p.training?.HasLearned(TrainableDefOf.Tameness) ?? false;
+					// Tame warrant requires any pawn of the required type.
+					if (tame != null && thing is Pawn p && p.RaceProps.Animal && p.kindDef == tame.AnimalRace && p.health != null)
+					{
+						// Check tameness.
+						bool isTame = p.training?.HasLearned(TrainableDefOf.Tameness) ?? false;
 
-					// Check health.
-					float healthPct = p.health.summaryHealth.SummaryHealthPercent;
+						// Check health.
+						float healthPct = p.health.summaryHealth.SummaryHealthPercent;
 
+						if (isTame && healthPct >= 0.9f)
+							return thing;
+					}
 
-					if (isTame && healthPct >= 0.9f)
+					// Corpse for animal-pawn warrant.
+					if (warrant is Warrant_Pawn pw && pw.Pawn.RaceProps.Animal)
+					{
+						if (thing is Pawn p2 && p2.kindDef == pw.Pawn.kindDef && p2.Dead)
+							return thing;
+
+						if (thing is Corpse c && c.InnerPawn?.kindDef == pw.Pawn.kindDef)
+							return thing;
+					}
+
+					// Corpse for pawn warrant.
+					if (warrant.thing is Pawn pawn && thing is Corpse corpse && corpse.InnerPawn == pawn)
+					{
 						return thing;
-				}
+					}
 
-				// Corpse for animal-pawn warrant.
-				if (warrant is Warrant_Pawn pw && pw.Pawn.RaceProps.Animal)
-				{
-					if (thing is Pawn p2 && p2.kindDef == pw.Pawn.kindDef && p2.Dead)
+					// Living pawn for pawn warrant.
+					if (thing == warrant.thing)
+					{
 						return thing;
-
-					if (thing is Corpse c && c.InnerPawn?.kindDef == pw.Pawn.kindDef)
-						return thing;
+					}
 				}
-
-				// Corpse for pawn warrant.
-				if (warrant.thing is Pawn pawn && thing is Corpse corpse && corpse.InnerPawn.thingIDNumber == pawn.thingIDNumber)
-				{
-					return thing;
-				}
-
-				// Living pawn for pawn warrant.
-				if (thing.thingIDNumber == warrant.thing.thingIDNumber)
-				{
-					return thing;
-				}
+			}
+			catch (Exception ex)
+			{
+				Log.Error("Error in TryGetWarrantTargetInCaravan: " + ex);
 			}
 			return null;
 		}
