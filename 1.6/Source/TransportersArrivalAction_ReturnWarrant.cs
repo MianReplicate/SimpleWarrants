@@ -47,6 +47,8 @@ namespace SimpleWarrants
         public override void Arrived(List<ActiveTransporterInfo> transporters, PlanetTile tile)
         {
             Thing target = null;
+            ThingOwner container = null;
+
             foreach (var pod in transporters)
             {
                 foreach (var thing in pod.innerContainer)
@@ -54,17 +56,35 @@ namespace SimpleWarrants
                     if (TryGetWarrantTargetInContainer(warrant, thing) != null)
                     {
                         target = thing;
+                        container = pod.innerContainer;
                         break;
                     }
+
+                    var compTransporter = thing.TryGetComp<CompTransporter>();
+                    if (compTransporter != null)
+                    {
+                        foreach (var innerThing in compTransporter.innerContainer)
+                        {
+                            if (TryGetWarrantTargetInContainer(warrant, innerThing) != null)
+                            {
+                                target = innerThing;
+                                container = compTransporter.innerContainer;
+                                break;
+                            }
+                        }
+                    }
+                    if (target != null) break;
                 }
                 if (target != null) break;
             }
 
-            if (target == null)
+            if (target == null || container == null)
             {
                 Log.Error($"Failed to find warrant target {warrant.thing.LabelCap} in transport pods for warrant {warrant.loadID}.");
                 return;
             }
+
+            container.Remove(target);
 
             warrant.status = WarrantStatus.Completed;
             var questTarget = target is Corpse corpse ? corpse.InnerPawn : target;
