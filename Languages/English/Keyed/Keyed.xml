@@ -67,7 +67,6 @@
   <SW.Rewards>Rewards</SW.Rewards>
   <SW.General>General</SW.General>
   <SW.Raids>Raids</SW.Raids>
-  <SW.DistanceWeighting>Distance Weighting</SW.DistanceWeighting>
   <SW.DistanceWeight>Faction distance weight</SW.DistanceWeight>
   <SW.DistanceWeight.Desc>Controls how strongly a faction's proximity to your colony influences its chance of posting warrants.
 
