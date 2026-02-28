@@ -70,6 +70,12 @@ namespace SimpleWarrants
         [Range(1f, 30f)]
         public float bountyHunterMTB = 5f;
 
+        [Header("SW.DistanceWeighting")]
+        [Label("SW.DistanceWeight")]
+        [Range(0f, 1f)]
+        [Percentage]
+        public float distanceWeight = 0f;
+
         public override void ExposeData()
         {
             base.ExposeData();

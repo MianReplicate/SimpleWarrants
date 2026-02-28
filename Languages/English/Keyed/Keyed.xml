@@ -67,6 +67,13 @@
   <SW.Rewards>Rewards</SW.Rewards>
   <SW.General>General</SW.General>
   <SW.Raids>Raids</SW.Raids>
+  <SW.DistanceWeighting>Distance Weighting</SW.DistanceWeighting>
+  <SW.DistanceWeight>Faction distance weight</SW.DistanceWeight>
+  <SW.DistanceWeight.Desc>Controls how strongly a faction's proximity to your colony influences its chance of posting warrants.
+
+At 0% (default), all factions have an equal chance regardless of distance.
+At 100%, nearby factions are heavily preferred and distant factions rarely post warrants.
+Values in between give a soft preference toward closer factions.</SW.DistanceWeight.Desc>
 
   <SW.Search>Search</SW.Search>
   <SW.EnableWarrantRewardScaling>Enable warrant reward threshold (minimum 5% from player's wealth)</SW.EnableWarrantRewardScaling>
@@ -93,6 +100,7 @@
 
 This will negatively impact relations with {1}!</SW.ConfirmationPrompt>
   <SW.WarrantCompletedByPods>{0} has sent the reward via transport pods for the completed warrant.</SW.WarrantCompletedByPods>
+  <SW.WarrantDeliveredByPods>The completed warrant has been delivered via transport pods.</SW.WarrantDeliveredByPods>
   <SW.ReturnWarrantViaTransportPods>Return warrant via transport pods ({0})</SW.ReturnWarrantViaTransportPods>
   <SW.EnableWarrantsOnPoaching>Enable warrants on poaching</SW.EnableWarrantsOnPoaching>
   <SW.EnableWarrantsOnFraud>Enable warrants on fraud</SW.EnableWarrantsOnFraud>

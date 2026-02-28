@@ -297,33 +297,50 @@ namespace SimpleWarrants
         private static bool PickWarrantIssuer(Faction targetFaction, bool mustBeHostile, out Faction issuer)
         {
             var validFactions = GetValidWarrantIssuers(targetFaction, mustBeHostile);
+            float strength = SimpleWarrantsMod.Settings.distanceWeight;
+
+            // If distance weighting is disabled (or no player settlements), pick uniformly.
+            if (strength <= 0f)
+                return validFactions.TryRandomElement(out issuer);
+
             var playerSettlements = Find.WorldObjects.Settlements
                     .Where(s => s.Faction == Faction.OfPlayer && s.Tile >= 0)
                     .ToList();
 
-            // If player has no valid settlement, don't compute by distance
             if (playerSettlements.Count == 0)
                 return validFactions.TryRandomElement(out issuer);
 
-            return validFactions.TryRandomElementByWeight(f => 
+            return validFactions.TryRandomElementByWeight(f =>
                 {
                     var dist = DistanceToPlayerOrInvalid(f, playerSettlements);
                     if (dist <= 0) return 0f;
-                    var weight = Mathf.InverseLerp(100f, 5f, dist);
-                    return weight <= 0f ? 0f : weight;
+
+                    // InverseLerp: dist=5 → 1.0, dist=100 → 0.0
+                    float distWeight = Mathf.InverseLerp(100f, 5f, dist);
+
+                    // Blend between uniform (1.0) and full distance preference using the slider.
+                    // At strength=0: all factions have weight 1 (uniform).
+                    // At strength=1: weight is purely distance-based.
+                    float blended = Mathf.Lerp(1f, distWeight, strength);
+                    return Mathf.Max(blended, 0f);
                 },
                 out issuer);
         }
 
         private static IEnumerable<Faction> GetValidWarrantIssuers(Faction targetFaction, bool mustBeHostile)
         {
-            return Find.FactionManager.AllFactions.Where(faction =>
+            var factions = Find.FactionManager.AllFactions.Where(faction =>
                 faction.def.humanlikeFaction &&
                 !faction.defeated &&
                 !faction.Hidden &&
                 !faction.IsPlayer &&
                 (mustBeHostile ? faction.HostileTo(targetFaction) : !faction.HostileTo(targetFaction)) &&
                 Find.World.worldObjects.Settlements.Any(settlement => settlement.Faction == faction && settlement.Tile >= 0));
+
+            if (Utils.PlayerHomeIsOrbital())
+                factions = factions.Where(f => f.def.techLevel >= TechLevel.Industrial);
+
+            return factions;
         }
 
         private static int DistanceToPlayerOrInvalid(Faction faction, List<Settlement> playerSettlements)
@@ -583,7 +600,7 @@ namespace SimpleWarrants
                     break;
             }
             var map = Find.AnyPlayerHomeMap;
-            var silvers = map.listerThings.ThingsOfDef(ThingDefOf.Silver).Where(x => !x.Position.Fogged(x.Map) && (map.areaManager.Home[x.Position] || x.IsInAnyStorage())).ToList();
+            var silvers = Utils.AllPlayerSilver();
 
             string title = "SW.FactionCompletedWarrant".Translate(warrant.accepteer.Named("FACTION"));
             DiaNode diaNode = new DiaNode("SW.FactionCompletedWarrantDesc".Translate(warrant.accepteer.Named("FACTION"), warrant.thing.LabelCap, reward));
@@ -621,7 +638,20 @@ namespace SimpleWarrants
                         HealthUtility.TryAnesthetize(pawn);
                     }
                 }
-                ((IncidentWorker_Visitors)SW_DefOf.SW_Visitors.Worker).SpawnVisitors(toDeliver, parms);
+
+                if (Utils.PlayerHomeIsOrbital())
+                {
+                    var homeMap = Find.AnyPlayerHomeMap;
+                    IntVec3 dropSpot = DropCellFinder.TradeDropSpot(homeMap);
+                    DropPodUtility.DropThingsNear(dropSpot, homeMap,
+                        new List<Thing> { toDeliver }, 110, false, false, true);
+                    Messages.Message("SW.WarrantDeliveredByPods".Translate(),
+                        MessageTypeDefOf.PositiveEvent, false);
+                }
+                else
+                {
+                    ((IncidentWorker_Visitors)SW_DefOf.SW_Visitors.Worker).SpawnVisitors(toDeliver, parms);
+                }
             };
             payOption.resolveTree = true;
             if (silvers.Sum(x => x.stackCount) < reward)

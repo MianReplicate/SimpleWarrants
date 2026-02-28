@@ -196,8 +196,7 @@ namespace SimpleWarrants
 
         public override void DoCompensateAction()
         {
-            var map = Find.CurrentMap ?? Find.AnyPlayerHomeMap;
-            var silvers = map.listerThings.ThingsOfDef(ThingDefOf.Silver).Where(x => !x.Position.Fogged(x.Map) && (map.areaManager.Home[x.Position] || x.IsInAnyStorage())).ToList();
+            var silvers = Utils.AllPlayerSilver();
             var toCompensate = Mathf.Max(rewardForDead, rewardForLiving);
             if (silvers.Sum(x => x.stackCount) >= toCompensate)
             {

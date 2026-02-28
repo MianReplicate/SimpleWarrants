@@ -79,5 +79,26 @@ namespace SimpleWarrants
             }
             return results;
         }
+
+        public static List<Thing> AllPlayerSilver()
+        {
+            var result = new List<Thing>();
+            foreach (var map in Find.Maps)
+            {
+                if (!map.IsPlayerHome) continue;
+                result.AddRange(map.listerThings.ThingsOfDef(ThingDefOf.Silver)
+                    .Where(s => !s.Position.Fogged(s.Map) &&
+                               (map.areaManager.Home[s.Position] || s.IsInAnyStorage())));
+            }
+            return result;
+        }
+
+        public static bool PlayerHomeIsOrbital()
+        {
+            var home = Find.AnyPlayerHomeMap;
+            if (home == null) return false;
+            return ModsConfig.OdysseyActive &&
+                   home.Tile.LayerDef == PlanetLayerDefOf.Orbit;
+        }
     }
 }
