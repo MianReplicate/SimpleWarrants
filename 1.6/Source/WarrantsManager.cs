@@ -120,13 +120,13 @@ namespace SimpleWarrants
             warrantTypeToWeight[TYPE_ANIMAL] = SimpleWarrantsMod.Settings.enableWarrantsOnAnimals ? 0.2f : 0f;
             warrantTypeToWeight[TYPE_TAME] = SimpleWarrantsMod.Settings.enableTamingWarrants ? 0.2f : 0f;
 
-            int type = warrantTypes.RandomElementByWeight(t => warrantTypeToWeight[t]);
+            var type = warrantTypes.RandomElementByWeight(t => warrantTypeToWeight[t]);
 
             switch (type)
             {
                 case TYPE_PAWN:
                     #region PAWN WARRANT
-                    var warrant = new Warrant_Pawn
+                    var pawnWarrant = new Warrant_Pawn
                     {
                         loadID = GetWarrantID(),
                         createdTick = Find.TickManager.TicksGame,
@@ -143,56 +143,49 @@ namespace SimpleWarrants
 
                     faction ??= Find.FactionManager.AllFactions.Where(x => x.def.humanlikeFaction && !x.defeated && !x.IsPlayer && !x.Hidden).RandomElement();
 
-                    GetValidWarrantIssuers(Faction.OfPlayer, false).TryRandomElement(out warrant.issuer);
-
-                    if (warrant.issuer == null)
+                    if (!PickWarrantIssuer(Faction.OfPlayer, false,  out pawnWarrant.issuer))
                     {
                         Log.Error("Failed to find a valid faction to issue warrant (non-hostile humanlike w/ fac base).");
                         return null;
                     }
 
-                    warrant.thing = PawnGenerator.GeneratePawn(randomKind, faction);
-                    warrant.message = Utils.GenerateTextFromRule(SW_DefOf.SW_Messages, warrant.Pawn.thingIDNumber);
-                    warrant.reason = Utils.GenerateTextFromRule(SW_DefOf.SW_WantedFor, warrant.Pawn.thingIDNumber);
-                    AssignRewards(warrant);
-                    return warrant;
-                #endregion
+                    pawnWarrant.thing = PawnGenerator.GeneratePawn(randomKind, faction);
+                    pawnWarrant.message = Utils.GenerateTextFromRule(SW_DefOf.SW_Messages, pawnWarrant.Pawn.thingIDNumber);
+                    pawnWarrant.reason = Utils.GenerateTextFromRule(SW_DefOf.SW_WantedFor, pawnWarrant.Pawn.thingIDNumber);
+                    AssignRewards(pawnWarrant);
+                    return pawnWarrant;
+                    #endregion
 
                 case TYPE_ANIMAL:
                     #region ANIMAL WARRANT
-                    warrant = new Warrant_Pawn
+                    var animalWarrant = new Warrant_Pawn
                     {
                         loadID = GetWarrantID(),
                         createdTick = Find.TickManager.TicksGame,
                         thing = PawnGenerator.GeneratePawn(Utils.AllWorthAnimalDefs.RandomElement())
                     };
-                    warrant.message = Utils.GenerateTextFromRule(SW_DefOf.SW_Messages, warrant.Pawn.thingIDNumber);
+                    animalWarrant.message = Utils.GenerateTextFromRule(SW_DefOf.SW_Messages, animalWarrant.Pawn.thingIDNumber);
 
-                    GetValidWarrantIssuers(Faction.OfPlayer, false).TryRandomElement(out warrant.issuer);
-
-                    if (warrant.issuer == null)
+                    if (!PickWarrantIssuer(Faction.OfPlayer, false, out animalWarrant.issuer))
                     {
                         Log.Error("Failed to find a valid faction to issue warrant (non-hostile humanlike w/ fac base).");
-                        warrant.thing.Destroy();
+                        animalWarrant.thing.Destroy();
                         return null;
                     }
 
-                    AssignRewards(warrant);
-                    return warrant;
-                #endregion
+                    AssignRewards(animalWarrant);
+                    return animalWarrant;
+                    #endregion
 
                 case TYPE_ARTIFACT:
                     #region ARTIFACT WARRANT
-                    // Artifact warrant.
                     var artWarrant = new Warrant_Artifact
                     {
                         loadID = GetWarrantID(),
                         createdTick = Find.TickManager.TicksGame
                     };
 
-                    GetValidWarrantIssuers(Faction.OfPlayer, false).TryRandomElement(out artWarrant.issuer);
-
-                    if (artWarrant.issuer == null)
+                    if (!PickWarrantIssuer(Faction.OfPlayer, false, out artWarrant.issuer))
                     {
                         Log.Error("Failed to find a valid faction to issue warrant (non-hostile humanlike w/ fac base).");
                         return null;
@@ -204,7 +197,7 @@ namespace SimpleWarrants
                     artWarrant.reward = (int)(artWarrant.thing.MarketValue * Rand.Range(0.5f, 2f));
                     DoWealthScaling(artWarrant);
                     return artWarrant;
-                #endregion
+                    #endregion
 
                 case TYPE_TAME:
                     var tameWarrant = new Warrant_TameAnimal()
@@ -213,9 +206,7 @@ namespace SimpleWarrants
                         createdTick = Find.TickManager.TicksGame
                     };
 
-                    GetValidWarrantIssuers(Faction.OfPlayer, false).TryRandomElement(out tameWarrant.issuer);
-
-                    if (tameWarrant.issuer == null)
+                    if (!PickWarrantIssuer(Faction.OfPlayer, false, out tameWarrant.issuer))
                     {
                         Log.Error("Failed to find a valid faction to issue warrant (non-hostile humanlike w/ fac base).");
                         return null;
@@ -303,6 +294,27 @@ namespace SimpleWarrants
             }
         }
 
+        private static bool PickWarrantIssuer(Faction targetFaction, bool mustBeHostile, out Faction issuer)
+        {
+            var validFactions = GetValidWarrantIssuers(targetFaction, mustBeHostile);
+            var playerSettlements = Find.WorldObjects.Settlements
+                    .Where(s => s.Faction == Faction.OfPlayer && s.Tile >= 0)
+                    .ToList();
+
+            // If player has no valid settlement, don't compute by distance
+            if (playerSettlements.Count == 0)
+                return validFactions.TryRandomElement(out issuer);
+
+            return validFactions.TryRandomElementByWeight(f => 
+                {
+                    var dist = DistanceToPlayerOrInvalid(f, playerSettlements);
+                    if (dist <= 0) return 0f;
+                    var weight = Mathf.InverseLerp(100f, 5f, dist);
+                    return weight <= 0f ? 0f : weight;
+                },
+                out issuer);
+        }
+
         private static IEnumerable<Faction> GetValidWarrantIssuers(Faction targetFaction, bool mustBeHostile)
         {
             return Find.FactionManager.AllFactions.Where(faction =>
@@ -311,7 +323,36 @@ namespace SimpleWarrants
                 !faction.Hidden &&
                 !faction.IsPlayer &&
                 (mustBeHostile ? faction.HostileTo(targetFaction) : !faction.HostileTo(targetFaction)) &&
-                Find.World.worldObjects.Settlements.Any(settlement => settlement.Faction == faction && settlement.Tile.LayerDef.SurfaceTiles));
+                Find.World.worldObjects.Settlements.Any(settlement => settlement.Faction == faction && settlement.Tile >= 0));
+        }
+
+        private static int DistanceToPlayerOrInvalid(Faction faction, List<Settlement> playerSettlements)
+        {
+            var minDistance = int.MaxValue;
+            foreach (var settlement in Find.WorldObjects.Settlements)
+            {
+                if (settlement.Faction != faction || settlement.Tile < 0)
+                    continue;
+                var dist = DistanceToNearestPlayerSettlement(settlement, playerSettlements);
+                if (dist < minDistance)
+                    minDistance = dist;
+            }
+            return minDistance == int.MaxValue ? -1 : minDistance;
+        }
+
+        private static int DistanceToNearestPlayerSettlement(Settlement factionSettlement, List<Settlement> playerSettlements)
+        {
+            var minDistance = int.MaxValue;
+            foreach (var playerSettlement in playerSettlements)
+            {
+                var dist = Find.WorldGrid.TraversalDistanceBetween(
+                    factionSettlement.Tile,
+                    playerSettlement.Tile,
+                    passImpassable: false);
+                if (dist < minDistance)
+                    minDistance = dist;
+            }
+            return minDistance;
         }
 
         public bool CanPutWarrantOn(Pawn pawn)
