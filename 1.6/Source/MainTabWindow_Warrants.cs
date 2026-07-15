@@ -200,7 +200,7 @@ namespace SimpleWarrants
 					var infoRect = new Rect(infoRectX, currentY, sectionRect.xMax - infoRectX, topSectionHeight);
 					var infoY = infoRect.y;
 					DrawInfoRow(ref infoY, infoRect, "SW.NameLabel", pawnWarrant.Pawn.LabelCap);
-					DrawInfoRow(ref infoY, infoRect, "SW.RaceLabel", pawnWarrant.Pawn.genes?.XenotypeLabel ?? pawnWarrant.Pawn.def.label);
+					DrawInfoRow(ref infoY, infoRect, "SW.RaceLabel", ModsConfig.BiotechActive ? pawnWarrant.Pawn.genes?.XenotypeLabel ?? pawnWarrant.Pawn.def.label : pawnWarrant.Pawn.def.label);
 					DrawInfoRow(ref infoY, infoRect, "SW.AgeLabel", pawnWarrant.Pawn.ageTracker.AgeBiologicalYears.ToString());
 					GUI.color = ColorLibrary.RedReadable;
 					DrawInfoRow(ref infoY, infoRect, "SW.AllianceLabel", pawnWarrant.Pawn.Faction != null ? pawnWarrant.Pawn.Faction.Name : "None".Translate().Resolve());
