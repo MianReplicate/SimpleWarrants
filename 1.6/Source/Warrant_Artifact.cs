@@ -22,7 +22,7 @@ namespace SimpleWarrants
         {
             base.Draw(rect, doAcceptAndDeclineButtons, doCompensateWarrantButton);
             var thingRect = new Rect(new Vector2(rect.x + 100, rect.y + 10), new Vector2(rect.height * 0.7f, rect.height));
-            GUI.DrawTexture(thingRect, thing.Graphic.MatSouth.mainTexture, ScaleMode.ScaleToFit);
+            Widgets.ThingIcon(thingRect, thing);
 
             Widgets.InfoCardButton(thingRect.xMax - 24, thingRect.yMax - 40, thing);
             Text.Font = GameFont.Medium;

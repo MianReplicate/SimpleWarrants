@@ -185,7 +185,7 @@ namespace SimpleWarrants
 				{
 					if (selectedWarrant is Warrant_Artifact)
 					{
-						GUI.DrawTexture(portraitRect, selectedWarrant.thing.Graphic.MatSouth.mainTexture, ScaleMode.ScaleToFit);
+						Widgets.ThingIcon(portraitRect, selectedWarrant.thing);
 					}
 					else if (selectedWarrant is Warrant_TameAnimal tameAnimal)
 					{
@@ -469,7 +469,7 @@ namespace SimpleWarrants
 				}
 
 				var thingRect = new Rect(new Vector2(createWarrant.x + 40, dropdownRect.yMax + 10), new Vector2(100 * 0.722f, 100 * 0.722f));
-				GUI.DrawTexture(thingRect, curArtifact.Graphic.MatSouth.mainTexture);
+				Widgets.ThingIcon(thingRect, curArtifact);
 				Widgets.InfoCardButton(thingRect.xMax, thingRect.y, curArtifact);
 
 				var nameRect = new Rect(createWarrant.x, thingRect.yMax, createWarrant.width, createWarrant.height);

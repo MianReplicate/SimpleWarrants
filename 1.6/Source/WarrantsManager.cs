@@ -193,7 +193,8 @@ namespace SimpleWarrants
 
                     var artifacts = Utils.AllArtifactDefs;
                     var randomArtifact = artifacts.RandomElement();
-                    artWarrant.thing = ThingMaker.MakeThing(randomArtifact);
+                    GenStuff.TryRandomStuffByCommonalityFor(randomArtifact, out var stuff);
+                    artWarrant.thing = ThingMaker.MakeThing(randomArtifact, stuff);
                     artWarrant.reward = (int)(artWarrant.thing.MarketValue * Rand.Range(0.5f, 2f));
                     DoWealthScaling(artWarrant);
                     return artWarrant;
